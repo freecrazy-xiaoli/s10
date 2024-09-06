@@ -1,0 +1,39 @@
+name: Compile Kernel
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Download toolchain  
+      run: |
+        git clone --depth=1 https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9 toolchain
+        
+    - name: Compile kernel
+      env:
+        ARCH: arm64
+        CROSS_COMPILE: ${{ github.workspace }}/toolchain/bin/aarch64-linux-android-
+      run: |
+        make clean
+        make defconfig
+        make -j$(nproc)
+        
+    - name: Generate kernel image
+      run: |
+        mkdir -p kernel_image
+        cp arch/arm64/boot/Image.gz kernel_image/
+        
+    - name: Upload kernel image  
+      uses: actions/upload-artifact@v2
+      with:
+        name: kernel-image
+        path: kernel_image
